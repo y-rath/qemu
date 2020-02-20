@@ -673,7 +673,7 @@ void simulate_rdmsr(struct CPUState *cpu)
 
     switch (msr) {
     case MSR_IA32_TSC:
-        val = rdtscp() + rvmcs(cpu->hvf_fd, VMCS_TSC_OFFSET);
+        val = rdtscp() + rvmcs(cpu->hvf_fd, VMCS_CTRL_TSC_OFFSET);
         break;
     case MSR_IA32_APICBASE:
         val = cpu_get_apic_base(X86_CPU(cpu)->apic_state);

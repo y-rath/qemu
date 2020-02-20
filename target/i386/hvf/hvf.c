@@ -244,9 +244,9 @@ void vmx_update_tpr(CPUState *cpu)
 
     wreg(cpu->hvf_fd, HV_X86_TPR, tpr);
     if (irr == -1) {
-        wvmcs(cpu->hvf_fd, VMCS_TPR_THRESHOLD, 0);
+        wvmcs(cpu->hvf_fd, VMCS_CTRL_TPR_THRESHOLD, 0);
     } else {
-        wvmcs(cpu->hvf_fd, VMCS_TPR_THRESHOLD, (irr > tpr) ? tpr >> 4 :
+        wvmcs(cpu->hvf_fd, VMCS_CTRL_TPR_THRESHOLD, (irr > tpr) ? tpr >> 4 :
               irr >> 4);
     }
 }
@@ -447,7 +447,7 @@ void hvf_reset_vcpu(CPUState *cpu) {
     /* TODO: this shouldn't be needed; there is already a call to
      * cpu_synchronize_all_post_reset in vl.c
      */
-    wvmcs(cpu->hvf_fd, VMCS_ENTRY_CTLS, 0);
+    wvmcs(cpu->hvf_fd, VMCS_CTRL_VMENTRY_CONTROLS, 0);
     wvmcs(cpu->hvf_fd, VMCS_GUEST_IA32_EFER, 0);
 
     /* Initialize PDPTE */
@@ -457,49 +457,49 @@ void hvf_reset_vcpu(CPUState *cpu) {
 
     macvm_set_cr0(cpu->hvf_fd, 0x60000010);
 
-    wvmcs(cpu->hvf_fd, VMCS_CR4_MASK, CR4_VMXE_MASK);
-    wvmcs(cpu->hvf_fd, VMCS_CR4_SHADOW, 0x0);
+    wvmcs(cpu->hvf_fd, VMCS_CTRL_CR4_MASK, CR4_VMXE_MASK);
+    wvmcs(cpu->hvf_fd, VMCS_CTRL_CR4_SHADOW, 0x0);
     wvmcs(cpu->hvf_fd, VMCS_GUEST_CR4, CR4_VMXE_MASK);
 
     /* set VMCS guest state fields */
-    wvmcs(cpu->hvf_fd, VMCS_GUEST_CS_SELECTOR, 0xf000);
+    wvmcs(cpu->hvf_fd, VMCS_GUEST_CS, 0xf000);
     wvmcs(cpu->hvf_fd, VMCS_GUEST_CS_LIMIT, 0xffff);
-    wvmcs(cpu->hvf_fd, VMCS_GUEST_CS_ACCESS_RIGHTS, 0x9b);
+    wvmcs(cpu->hvf_fd, VMCS_GUEST_CS_AR, 0x9b);
     wvmcs(cpu->hvf_fd, VMCS_GUEST_CS_BASE, 0xffff0000);
 
-    wvmcs(cpu->hvf_fd, VMCS_GUEST_DS_SELECTOR, 0);
+    wvmcs(cpu->hvf_fd, VMCS_GUEST_DS, 0);
     wvmcs(cpu->hvf_fd, VMCS_GUEST_DS_LIMIT, 0xffff);
-    wvmcs(cpu->hvf_fd, VMCS_GUEST_DS_ACCESS_RIGHTS, 0x93);
+    wvmcs(cpu->hvf_fd, VMCS_GUEST_DS_AR, 0x93);
     wvmcs(cpu->hvf_fd, VMCS_GUEST_DS_BASE, 0);
 
-    wvmcs(cpu->hvf_fd, VMCS_GUEST_ES_SELECTOR, 0);
+    wvmcs(cpu->hvf_fd, VMCS_GUEST_ES, 0);
     wvmcs(cpu->hvf_fd, VMCS_GUEST_ES_LIMIT, 0xffff);
-    wvmcs(cpu->hvf_fd, VMCS_GUEST_ES_ACCESS_RIGHTS, 0x93);
+    wvmcs(cpu->hvf_fd, VMCS_GUEST_ES_AR, 0x93);
     wvmcs(cpu->hvf_fd, VMCS_GUEST_ES_BASE, 0);
 
-    wvmcs(cpu->hvf_fd, VMCS_GUEST_FS_SELECTOR, 0);
+    wvmcs(cpu->hvf_fd, VMCS_GUEST_FS, 0);
     wvmcs(cpu->hvf_fd, VMCS_GUEST_FS_LIMIT, 0xffff);
-    wvmcs(cpu->hvf_fd, VMCS_GUEST_FS_ACCESS_RIGHTS, 0x93);
+    wvmcs(cpu->hvf_fd, VMCS_GUEST_FS_AR, 0x93);
     wvmcs(cpu->hvf_fd, VMCS_GUEST_FS_BASE, 0);
 
-    wvmcs(cpu->hvf_fd, VMCS_GUEST_GS_SELECTOR, 0);
+    wvmcs(cpu->hvf_fd, VMCS_GUEST_GS, 0);
     wvmcs(cpu->hvf_fd, VMCS_GUEST_GS_LIMIT, 0xffff);
-    wvmcs(cpu->hvf_fd, VMCS_GUEST_GS_ACCESS_RIGHTS, 0x93);
+    wvmcs(cpu->hvf_fd, VMCS_GUEST_GS_AR, 0x93);
     wvmcs(cpu->hvf_fd, VMCS_GUEST_GS_BASE, 0);
 
-    wvmcs(cpu->hvf_fd, VMCS_GUEST_SS_SELECTOR, 0);
+    wvmcs(cpu->hvf_fd, VMCS_GUEST_SS, 0);
     wvmcs(cpu->hvf_fd, VMCS_GUEST_SS_LIMIT, 0xffff);
-    wvmcs(cpu->hvf_fd, VMCS_GUEST_SS_ACCESS_RIGHTS, 0x93);
+    wvmcs(cpu->hvf_fd, VMCS_GUEST_SS_AR, 0x93);
     wvmcs(cpu->hvf_fd, VMCS_GUEST_SS_BASE, 0);
 
-    wvmcs(cpu->hvf_fd, VMCS_GUEST_LDTR_SELECTOR, 0);
+    wvmcs(cpu->hvf_fd, VMCS_GUEST_LDTR, 0);
     wvmcs(cpu->hvf_fd, VMCS_GUEST_LDTR_LIMIT, 0);
-    wvmcs(cpu->hvf_fd, VMCS_GUEST_LDTR_ACCESS_RIGHTS, 0x10000);
+    wvmcs(cpu->hvf_fd, VMCS_GUEST_LDTR_AR, 0x10000);
     wvmcs(cpu->hvf_fd, VMCS_GUEST_LDTR_BASE, 0);
 
-    wvmcs(cpu->hvf_fd, VMCS_GUEST_TR_SELECTOR, 0);
+    wvmcs(cpu->hvf_fd, VMCS_GUEST_TR, 0);
     wvmcs(cpu->hvf_fd, VMCS_GUEST_TR_LIMIT, 0);
-    wvmcs(cpu->hvf_fd, VMCS_GUEST_TR_ACCESS_RIGHTS, 0x83);
+    wvmcs(cpu->hvf_fd, VMCS_GUEST_TR_AR, 0x83);
     wvmcs(cpu->hvf_fd, VMCS_GUEST_TR_BASE, 0);
 
     wvmcs(cpu->hvf_fd, VMCS_GUEST_GDTR_LIMIT, 0);
@@ -586,27 +586,27 @@ int hvf_init_vcpu(CPUState *cpu)
     }
 
     /* set VMCS control fields */
-    wvmcs(cpu->hvf_fd, VMCS_PIN_BASED_CTLS,
+    wvmcs(cpu->hvf_fd, VMCS_CTRL_PIN_BASED,
           cap2ctrl(hvf_state->hvf_caps->vmx_cap_pinbased,
-          VMCS_PIN_BASED_CTLS_EXTINT |
-          VMCS_PIN_BASED_CTLS_NMI |
-          VMCS_PIN_BASED_CTLS_VNMI));
-    wvmcs(cpu->hvf_fd, VMCS_PRI_PROC_BASED_CTLS,
+          PIN_BASED_INTR |
+          PIN_BASED_NMI |
+          PIN_BASED_VIRTUAL_NMI));
+    wvmcs(cpu->hvf_fd, VMCS_CTRL_CPU_BASED,
           cap2ctrl(hvf_state->hvf_caps->vmx_cap_procbased,
-          VMCS_PRI_PROC_BASED_CTLS_HLT |
-          VMCS_PRI_PROC_BASED_CTLS_MWAIT |
-          VMCS_PRI_PROC_BASED_CTLS_TSC_OFFSET |
-          VMCS_PRI_PROC_BASED_CTLS_TPR_SHADOW) |
-          VMCS_PRI_PROC_BASED_CTLS_SEC_CONTROL);
-    wvmcs(cpu->hvf_fd, VMCS_SEC_PROC_BASED_CTLS,
+          CPU_BASED_HLT |
+          CPU_BASED_MWAIT |
+          CPU_BASED_TSC_OFFSET |
+          CPU_BASED_TPR_SHADOW) |
+          CPU_BASED_SECONDARY_CTLS);
+    wvmcs(cpu->hvf_fd, VMCS_CTRL_CPU_BASED2,
           cap2ctrl(hvf_state->hvf_caps->vmx_cap_procbased2,
-                   VMCS_PRI_PROC_BASED2_CTLS_APIC_ACCESSES));
+                   CPU_BASED2_VIRTUAL_APIC |
+                   CPU_BASED2_RDTSCP ));
 
-    wvmcs(cpu->hvf_fd, VMCS_ENTRY_CTLS, cap2ctrl(hvf_state->hvf_caps->vmx_cap_entry,
-          0));
-    wvmcs(cpu->hvf_fd, VMCS_EXCEPTION_BITMAP, 0); /* Double fault */
+    wvmcs(cpu->hvf_fd, VMCS_CTRL_VMENTRY_CONTROLS, cap2ctrl(hvf_state->hvf_caps->vmx_cap_entry, 0));
+    wvmcs(cpu->hvf_fd, VMCS_CTRL_EXC_BITMAP, 0); /* Double fault */
 
-    wvmcs(cpu->hvf_fd, VMCS_TPR_THRESHOLD, 0);
+    wvmcs(cpu->hvf_fd, VMCS_CTRL_TPR_THRESHOLD, 0);
 
     x86cpu = X86_CPU(cpu);
     x86cpu->env.xsave_buf = qemu_memalign(4096, 4096);
@@ -639,40 +639,40 @@ static void hvf_store_events(CPUState *cpu, uint32_t ins_len, uint64_t idtvec_in
     env->nmi_injected = false;
     env->ins_len = 0;
     env->has_error_code = false;
-    if (idtvec_info & VMCS_IDT_VEC_VALID) {
+    if (idtvec_info & IRQ_INFO_VALID) {
         switch (idtvec_info & VMCS_IDT_VEC_TYPE) {
-        case VMCS_IDT_VEC_HWINTR:
-        case VMCS_IDT_VEC_SWINTR:
+        case IRQ_INFO_EXT_IRQ:
+        case IRQ_INFO_SOFT_IRQ:
             env->interrupt_injected = idtvec_info & VMCS_IDT_VEC_VECNUM;
             break;
-        case VMCS_IDT_VEC_NMI:
+        case IRQ_INFO_NMI:
             env->nmi_injected = true;
             break;
-        case VMCS_IDT_VEC_HWEXCEPTION:
-        case VMCS_IDT_VEC_SWEXCEPTION:
+        case IRQ_INFO_HARD_EXC:
+        case IRQ_INFO_SOFT_EXC:
             env->exception_nr = idtvec_info & VMCS_IDT_VEC_VECNUM;
             env->exception_injected = 1;
             break;
-        case VMCS_IDT_VEC_PRIV_SWEXCEPTION:
+        case IRQ_INFO_PRIV_SOFT_EXC:
         default:
             abort();
         }
-        if ((idtvec_info & VMCS_IDT_VEC_TYPE) == VMCS_IDT_VEC_SWEXCEPTION ||
-            (idtvec_info & VMCS_IDT_VEC_TYPE) == VMCS_IDT_VEC_SWINTR) {
+        if ((idtvec_info & VMCS_IDT_VEC_TYPE) == IRQ_INFO_SOFT_EXC ||
+            (idtvec_info & VMCS_IDT_VEC_TYPE) == IRQ_INFO_SOFT_IRQ) {
             env->ins_len = ins_len;
         }
-        if (idtvec_info & VMCS_IDT_VEC_ERRCODE_VALID) {
+        if (idtvec_info & IRQ_INFO_ERROR_VALID) {
             env->has_error_code = true;
-            env->error_code = rvmcs(cpu->hvf_fd, VMCS_IDT_VECTORING_ERROR);
+            env->error_code = rvmcs(cpu->hvf_fd, VMCS_RO_IDT_VECTOR_ERROR);
         }
     }
-    if ((rvmcs(cpu->hvf_fd, VMCS_GUEST_INTERRUPTIBILITY) &
+    if ((rvmcs(cpu->hvf_fd, VMCS_GUEST_IGNORE_IRQ) &
         VMCS_INTERRUPTIBILITY_NMI_BLOCKING)) {
         env->hflags2 |= HF2_NMI_MASK;
     } else {
         env->hflags2 &= ~HF2_NMI_MASK;
     }
-    if (rvmcs(cpu->hvf_fd, VMCS_GUEST_INTERRUPTIBILITY) &
+    if (rvmcs(cpu->hvf_fd, VMCS_GUEST_IGNORE_IRQ) &
          (VMCS_INTERRUPTIBILITY_STI_BLOCKING |
          VMCS_INTERRUPTIBILITY_MOVSS_BLOCKING)) {
         env->hflags |= HF_INHIBIT_IRQ_MASK;
@@ -713,12 +713,11 @@ int hvf_vcpu_exec(CPUState *cpu)
         assert_hvf_ok(r);
 
         /* handle VMEXIT */
-        uint64_t exit_reason = rvmcs(cpu->hvf_fd, VMCS_EXIT_REASON);
-        uint64_t exit_qual = rvmcs(cpu->hvf_fd, VMCS_EXIT_QUALIFICATION);
-        uint32_t ins_len = (uint32_t)rvmcs(cpu->hvf_fd,
-                                           VMCS_EXIT_INSTRUCTION_LENGTH);
+        uint64_t exit_reason = rvmcs(cpu->hvf_fd, VMCS_RO_EXIT_REASON);
+        uint64_t exit_qual = rvmcs(cpu->hvf_fd, VMCS_RO_EXIT_QUALIFIC);
+        uint32_t ins_len = (uint32_t)rvmcs(cpu->hvf_fd, VMCS_RO_VMEXIT_INSTR_LEN);
 
-        uint64_t idtvec_info = rvmcs(cpu->hvf_fd, VMCS_IDT_VECTORING_INFO);
+        uint64_t idtvec_info = rvmcs(cpu->hvf_fd, VMCS_RO_IDT_VECTOR_INFO);
 
         hvf_store_events(cpu, ins_len, idtvec_info);
         rip = rreg(cpu->hvf_fd, HV_X86_RIP);
@@ -732,12 +731,12 @@ int hvf_vcpu_exec(CPUState *cpu)
 
         ret = 0;
         switch (exit_reason) {
-        case EXIT_REASON_HLT: {
+        case VMX_REASON_HLT: {
             macvm_set_rip(cpu, rip + ins_len);
             if (!((cpu->interrupt_request & CPU_INTERRUPT_HARD) &&
                 (EFLAGS(env) & IF_MASK))
                 && !(cpu->interrupt_request & CPU_INTERRUPT_NMI) &&
-                !(idtvec_info & VMCS_IDT_VEC_VALID)) {
+                !(idtvec_info & IRQ_INFO_VALID)) {
                 cpu->halted = 1;
                 ret = EXCP_HLT;
                 break;
@@ -745,17 +744,17 @@ int hvf_vcpu_exec(CPUState *cpu)
             ret = EXCP_INTERRUPT;
             break;
         }
-        case EXIT_REASON_MWAIT: {
+        case VMX_REASON_MWAIT: {
             ret = EXCP_INTERRUPT;
             break;
         }
         /* Need to check if MMIO or unmapped fault */
-        case EXIT_REASON_EPT_FAULT:
+        case VMX_REASON_EPT_VIOLATION:
         {
             hvf_slot *slot;
             uint64_t gpa = rvmcs(cpu->hvf_fd, VMCS_GUEST_PHYSICAL_ADDRESS);
 
-            if (((idtvec_info & VMCS_IDT_VEC_VALID) == 0) &&
+            if (((idtvec_info & IRQ_INFO_VALID) == 0) &&
                 ((exit_qual & EXIT_QUAL_NMIUDTI) != 0)) {
                 vmx_set_nmi_blocking(cpu);
             }
@@ -775,7 +774,7 @@ int hvf_vcpu_exec(CPUState *cpu)
             }
             break;
         }
-        case EXIT_REASON_INOUT:
+        case VMX_REASON_IO:
         {
             uint32_t in = (exit_qual & 8) != 0;
             uint32_t size =  (exit_qual & 7) + 1;
@@ -817,7 +816,7 @@ int hvf_vcpu_exec(CPUState *cpu)
 
             break;
         }
-        case EXIT_REASON_CPUID: {
+        case VMX_REASON_CPUID: {
             uint32_t rax = (uint32_t)rreg(cpu->hvf_fd, HV_X86_RAX);
             uint32_t rbx = (uint32_t)rreg(cpu->hvf_fd, HV_X86_RBX);
             uint32_t rcx = (uint32_t)rreg(cpu->hvf_fd, HV_X86_RCX);
@@ -833,7 +832,7 @@ int hvf_vcpu_exec(CPUState *cpu)
             macvm_set_rip(cpu, rip + ins_len);
             break;
         }
-        case EXIT_REASON_XSETBV: {
+        case VMX_REASON_XSETBV: {
             X86CPU *x86_cpu = X86_CPU(cpu);
             CPUX86State *env = &x86_cpu->env;
             uint32_t eax = (uint32_t)rreg(cpu->hvf_fd, HV_X86_RAX);
@@ -849,32 +848,32 @@ int hvf_vcpu_exec(CPUState *cpu)
             macvm_set_rip(cpu, rip + ins_len);
             break;
         }
-        case EXIT_REASON_INTR_WINDOW:
+        case VMX_REASON_IRQ_WND:
             vmx_clear_int_window_exiting(cpu);
             ret = EXCP_INTERRUPT;
             break;
-        case EXIT_REASON_NMI_WINDOW:
+        case VMX_REASON_VIRTUAL_NMI_WND:
             vmx_clear_nmi_window_exiting(cpu);
             ret = EXCP_INTERRUPT;
             break;
-        case EXIT_REASON_EXT_INTR:
+        case VMX_REASON_IRQ:
             /* force exit and allow io handling */
             ret = EXCP_INTERRUPT;
             break;
-        case EXIT_REASON_RDMSR:
-        case EXIT_REASON_WRMSR:
+        case VMX_REASON_RDMSR:
+        case VMX_REASON_WRMSR:
         {
             load_regs(cpu);
-            if (exit_reason == EXIT_REASON_RDMSR) {
+            if (exit_reason == VMX_REASON_RDMSR) {
                 simulate_rdmsr(cpu);
             } else {
                 simulate_wrmsr(cpu);
             }
-            RIP(env) += rvmcs(cpu->hvf_fd, VMCS_EXIT_INSTRUCTION_LENGTH);
+            RIP(env) += rvmcs(cpu->hvf_fd, VMCS_RO_VMEXIT_INSTR_LEN);
             store_regs(cpu);
             break;
         }
-        case EXIT_REASON_CR_ACCESS: {
+        case VMX_REASON_MOV_CR: {
             int cr;
             int reg;
 
@@ -910,7 +909,7 @@ int hvf_vcpu_exec(CPUState *cpu)
             store_regs(cpu);
             break;
         }
-        case EXIT_REASON_APIC_ACCESS: { /* TODO */
+        case VMX_REASON_APIC_ACCESS: { /* TODO */
             struct x86_decode decode;
 
             load_regs(cpu);
@@ -921,24 +920,24 @@ int hvf_vcpu_exec(CPUState *cpu)
             store_regs(cpu);
             break;
         }
-        case EXIT_REASON_TPR: {
+        case VMX_REASON_TPR_THRESHOLD: {
             ret = 1;
             break;
         }
-        case EXIT_REASON_TASK_SWITCH: {
-            uint64_t vinfo = rvmcs(cpu->hvf_fd, VMCS_IDT_VECTORING_INFO);
+        case VMX_REASON_TASK: {
+            uint64_t vinfo = rvmcs(cpu->hvf_fd, VMCS_RO_IDT_VECTOR_INFO);
             x68_segment_selector sel = {.sel = exit_qual & 0xffff};
             vmx_handle_task_switch(cpu, sel, (exit_qual >> 30) & 0x3,
-             vinfo & VMCS_INTR_VALID, vinfo & VECTORING_INFO_VECTOR_MASK, vinfo
+             vinfo & IRQ_INFO_VALID, vinfo & VECTORING_INFO_VECTOR_MASK, vinfo
              & VMCS_INTR_T_MASK);
             break;
         }
-        case EXIT_REASON_TRIPLE_FAULT: {
+        case VMX_REASON_TRIPLE_FAULT: {
             qemu_system_reset_request(SHUTDOWN_CAUSE_GUEST_RESET);
             ret = EXCP_INTERRUPT;
             break;
         }
-        case EXIT_REASON_RDPMC:
+        case VMX_REASON_RDPMC:
             wreg(cpu->hvf_fd, HV_X86_RAX, 0);
             wreg(cpu->hvf_fd, HV_X86_RDX, 0);
             macvm_set_rip(cpu, rip + ins_len);
