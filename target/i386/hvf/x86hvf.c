@@ -238,7 +238,7 @@ void hvf_get_msrs(CPUState *cpu_state)
 
     hv_vcpu_read_msr(cpu_state->hvf_fd, MSR_IA32_APICBASE, &tmp);
     
-    env->tsc = rdtscp() + rvmcs(cpu_state->hvf_fd, VMCS_TSC_OFFSET);
+    env->tsc = rdtscp() + rvmcs(cpu_state->hvf_fd, VMCS_CTRL_TSC_OFFSET);
 }
 
 int hvf_put_registers(CPUState *cpu_state)
@@ -332,17 +332,15 @@ int hvf_get_registers(CPUState *cpu_state)
 static void vmx_set_int_window_exiting(CPUState *cpu)
 {
      uint64_t val;
-     val = rvmcs(cpu->hvf_fd, VMCS_PRI_PROC_BASED_CTLS);
-     wvmcs(cpu->hvf_fd, VMCS_PRI_PROC_BASED_CTLS, val |
-             VMCS_PRI_PROC_BASED_CTLS_INT_WINDOW_EXITING);
+     val = rvmcs(cpu->hvf_fd, VMCS_CTRL_CPU_BASED);
+     wvmcs(cpu->hvf_fd, VMCS_CTRL_CPU_BASED, val | CPU_BASED_IRQ_WND);
 }
 
 void vmx_clear_int_window_exiting(CPUState *cpu)
 {
      uint64_t val;
-     val = rvmcs(cpu->hvf_fd, VMCS_PRI_PROC_BASED_CTLS);
-     wvmcs(cpu->hvf_fd, VMCS_PRI_PROC_BASED_CTLS, val &
-             ~VMCS_PRI_PROC_BASED_CTLS_INT_WINDOW_EXITING);
+     val = rvmcs(cpu->hvf_fd, VMCS_CTRL_CPU_BASED);
+     wvmcs(cpu->hvf_fd, VMCS_CTRL_CPU_BASED, val & ~CPU_BASED_IRQ_WND);
 }
 
 bool hvf_inject_interrupts(CPUState *cpu_state)
@@ -356,55 +354,55 @@ bool hvf_inject_interrupts(CPUState *cpu_state)
     if (env->interrupt_injected != -1) {
         vector = env->interrupt_injected;
         if (env->ins_len) {
-            intr_type = VMCS_INTR_T_SWINTR;
+            intr_type = IRQ_INFO_SOFT_IRQ;
         } else {
-            intr_type = VMCS_INTR_T_HWINTR;
+            intr_type = IRQ_INFO_EXT_IRQ;
         }
     } else if (env->exception_nr != -1) {
         vector = env->exception_nr;
         if (vector == EXCP03_INT3 || vector == EXCP04_INTO) {
-            intr_type = VMCS_INTR_T_SWEXCEPTION;
+            intr_type = IRQ_INFO_SOFT_EXC;
         } else {
-            intr_type = VMCS_INTR_T_HWEXCEPTION;
+            intr_type = IRQ_INFO_HARD_EXC;
         }
     } else if (env->nmi_injected) {
         vector = EXCP02_NMI;
-        intr_type = VMCS_INTR_T_NMI;
+        intr_type = IRQ_INFO_NMI;
     } else {
         have_event = false;
     }
 
     uint64_t info = 0;
     if (have_event) {
-        info = vector | intr_type | VMCS_INTR_VALID;
-        uint64_t reason = rvmcs(cpu_state->hvf_fd, VMCS_EXIT_REASON);
-        if (env->nmi_injected && reason != EXIT_REASON_TASK_SWITCH) {
+        info = vector | intr_type | IRQ_INFO_VALID;
+        uint64_t reason = rvmcs(cpu_state->hvf_fd, VMCS_RO_EXIT_REASON);
+        if (env->nmi_injected && reason != VMX_REASON_TASK) {
             vmx_clear_nmi_blocking(cpu_state);
         }
 
-        if (!(env->hflags2 & HF2_NMI_MASK) || intr_type != VMCS_INTR_T_NMI) {
+        if (!(env->hflags2 & HF2_NMI_MASK) || intr_type != IRQ_INFO_NMI) {
             info &= ~(1 << 12); /* clear undefined bit */
-            if (intr_type == VMCS_INTR_T_SWINTR ||
-                intr_type == VMCS_INTR_T_SWEXCEPTION) {
-                wvmcs(cpu_state->hvf_fd, VMCS_ENTRY_INST_LENGTH, env->ins_len);
+            if (intr_type == IRQ_INFO_SOFT_IRQ ||
+                intr_type == IRQ_INFO_SOFT_EXC) {
+                wvmcs(cpu_state->hvf_fd, VMCS_CTRL_VMENTRY_INSTR_LEN, env->ins_len);
             }
             
             if (env->has_error_code) {
-                wvmcs(cpu_state->hvf_fd, VMCS_ENTRY_EXCEPTION_ERROR,
+                wvmcs(cpu_state->hvf_fd, VMCS_CTRL_VMENTRY_EXC_ERROR,
                       env->error_code);
                 /* Indicate that VMCS_ENTRY_EXCEPTION_ERROR is valid */
-                info |= VMCS_INTR_DEL_ERRCODE;
+                info |= IRQ_INFO_ERROR_VALID;
             }
             /*printf("reinject  %lx err %d\n", info, err);*/
-            wvmcs(cpu_state->hvf_fd, VMCS_ENTRY_INTR_INFO, info);
+            wvmcs(cpu_state->hvf_fd, VMCS_CTRL_VMENTRY_IRQ_INFO, info);
         };
     }
 
     if (cpu_state->interrupt_request & CPU_INTERRUPT_NMI) {
-        if (!(env->hflags2 & HF2_NMI_MASK) && !(info & VMCS_INTR_VALID)) {
+        if (!(env->hflags2 & HF2_NMI_MASK) && !(info & IRQ_INFO_VALID)) {
             cpu_state->interrupt_request &= ~CPU_INTERRUPT_NMI;
-            info = VMCS_INTR_VALID | VMCS_INTR_T_NMI | EXCP02_NMI;
-            wvmcs(cpu_state->hvf_fd, VMCS_ENTRY_INTR_INFO, info);
+            info = IRQ_INFO_VALID | IRQ_INFO_NMI | EXCP02_NMI;
+            wvmcs(cpu_state->hvf_fd, VMCS_CTRL_VMENTRY_IRQ_INFO, info);
         } else {
             vmx_set_nmi_window_exiting(cpu_state);
         }
@@ -412,12 +410,12 @@ bool hvf_inject_interrupts(CPUState *cpu_state)
 
     if (!(env->hflags & HF_INHIBIT_IRQ_MASK) &&
         (cpu_state->interrupt_request & CPU_INTERRUPT_HARD) &&
-        (EFLAGS(env) & IF_MASK) && !(info & VMCS_INTR_VALID)) {
+        (EFLAGS(env) & IF_MASK) && !(info & IRQ_INFO_VALID)) {
         int line = cpu_get_pic_interrupt(&x86cpu->env);
         cpu_state->interrupt_request &= ~CPU_INTERRUPT_HARD;
         if (line >= 0) {
-            wvmcs(cpu_state->hvf_fd, VMCS_ENTRY_INTR_INFO, line |
-                  VMCS_INTR_VALID | VMCS_INTR_T_HWINTR);
+            wvmcs(cpu_state->hvf_fd, VMCS_CTRL_VMENTRY_IRQ_INFO, line |
+                  IRQ_INFO_VALID | IRQ_INFO_EXT_IRQ);
         }
     }
     if (cpu_state->interrupt_request & CPU_INTERRUPT_HARD) {

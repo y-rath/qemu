@@ -112,10 +112,10 @@ static int task_switch_32(CPUState *cpu, x68_segment_selector tss_sel, x68_segme
 void vmx_handle_task_switch(CPUState *cpu, x68_segment_selector tss_sel, int reason, bool gate_valid, uint8_t gate, uint64_t gate_type)
 {
     uint64_t rip = rreg(cpu->hvf_fd, HV_X86_RIP);
-    if (!gate_valid || (gate_type != VMCS_INTR_T_HWEXCEPTION &&
-                        gate_type != VMCS_INTR_T_HWINTR &&
-                        gate_type != VMCS_INTR_T_NMI)) {
-        int ins_len = rvmcs(cpu->hvf_fd, VMCS_EXIT_INSTRUCTION_LENGTH);
+    if (!gate_valid || (gate_type != IRQ_INFO_HARD_EXC &&
+                        gate_type != IRQ_INFO_EXT_IRQ &&
+                        gate_type != IRQ_INFO_NMI)) {
+        int ins_len = rvmcs(cpu->hvf_fd, VMCS_RO_VMEXIT_INSTR_LEN);
         macvm_set_rip(cpu, rip + ins_len);
         return;
     }

@@ -24,10 +24,10 @@
 
 #define VMX_SEGMENT_FIELD(seg)                        \
     [R_##seg] = {                                     \
-        .selector = VMCS_GUEST_##seg##_SELECTOR,      \
+        .selector = VMCS_GUEST_##seg,                 \
         .base = VMCS_GUEST_##seg##_BASE,              \
         .limit = VMCS_GUEST_##seg##_LIMIT,            \
-        .ar_bytes = VMCS_GUEST_##seg##_ACCESS_RIGHTS, \
+        .ar_bytes = VMCS_GUEST_##seg##_AR,            \
 }
 
 static const struct vmx_segment_field {

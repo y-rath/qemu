@@ -92,14 +92,14 @@ static void enter_long_mode(hv_vcpuid_t vcpu, uint64_t cr0, uint64_t efer)
 
     efer |= MSR_EFER_LMA;
     wvmcs(vcpu, VMCS_GUEST_IA32_EFER, efer);
-    entry_ctls = rvmcs(vcpu, VMCS_ENTRY_CTLS);
-    wvmcs(vcpu, VMCS_ENTRY_CTLS, rvmcs(vcpu, VMCS_ENTRY_CTLS) |
+    entry_ctls = rvmcs(vcpu, VMCS_CTRL_VMENTRY_CONTROLS);
+    wvmcs(vcpu, VMCS_CTRL_VMENTRY_CONTROLS, rvmcs(vcpu, VMCS_CTRL_VMENTRY_CONTROLS) |
           VM_ENTRY_GUEST_LMA);
 
-    uint64_t guest_tr_ar = rvmcs(vcpu, VMCS_GUEST_TR_ACCESS_RIGHTS);
+    uint64_t guest_tr_ar = rvmcs(vcpu, VMCS_GUEST_TR_AR);
     if ((efer & MSR_EFER_LME) &&
         (guest_tr_ar & AR_TYPE_MASK) != AR_TYPE_BUSY_64_TSS) {
-        wvmcs(vcpu, VMCS_GUEST_TR_ACCESS_RIGHTS,
+        wvmcs(vcpu, VMCS_GUEST_TR_AR,
               (guest_tr_ar & ~AR_TYPE_MASK) | AR_TYPE_BUSY_64_TSS);
     }
 }
@@ -108,8 +108,8 @@ static void exit_long_mode(hv_vcpuid_t vcpu, uint64_t cr0, uint64_t efer)
 {
     uint64_t entry_ctls;
 
-    entry_ctls = rvmcs(vcpu, VMCS_ENTRY_CTLS);
-    wvmcs(vcpu, VMCS_ENTRY_CTLS, entry_ctls & ~VM_ENTRY_GUEST_LMA);
+    entry_ctls = rvmcs(vcpu, VMCS_CTRL_VMENTRY_CONTROLS);
+    wvmcs(vcpu, VMCS_CTRL_VMENTRY_CONTROLS, entry_ctls & ~VM_ENTRY_GUEST_LMA);
 
     efer &= ~MSR_EFER_LMA;
     wvmcs(vcpu, VMCS_GUEST_IA32_EFER, efer);
@@ -135,8 +135,8 @@ static inline void macvm_set_cr0(hv_vcpuid_t vcpu, uint64_t cr0)
         }
     }
 
-    wvmcs(vcpu, VMCS_CR0_MASK, mask);
-    wvmcs(vcpu, VMCS_CR0_SHADOW, cr0);
+    wvmcs(vcpu, VMCS_CTRL_CR0_MASK, mask);
+    wvmcs(vcpu, VMCS_CTRL_CR0_SHADOW, cr0);
 
     if (efer & MSR_EFER_LME) {
         if (!(old_cr0 & CR0_PG) && (cr0 & CR0_PG)) {
@@ -160,7 +160,7 @@ static inline void macvm_set_cr4(hv_vcpuid_t vcpu, uint64_t cr4)
     uint64_t guest_cr4 = cr4 | CR4_VMXE;
 
     wvmcs(vcpu, VMCS_GUEST_CR4, guest_cr4);
-    wvmcs(vcpu, VMCS_CR4_SHADOW, cr4);
+    wvmcs(vcpu, VMCS_CTRL_CR4_SHADOW, cr4);
 
     hv_vcpu_invalidate_tlb(vcpu);
     hv_vcpu_flush(vcpu);
@@ -174,10 +174,10 @@ static inline void macvm_set_rip(CPUState *cpu, uint64_t rip)
     wreg(cpu->hvf_fd, HV_X86_RIP, rip);
 
     /* after moving forward in rip, we need to clean INTERRUPTABILITY */
-   val = rvmcs(cpu->hvf_fd, VMCS_GUEST_INTERRUPTIBILITY);
+   val = rvmcs(cpu->hvf_fd, VMCS_GUEST_IGNORE_IRQ);
    if (val & (VMCS_INTERRUPTIBILITY_STI_BLOCKING |
                VMCS_INTERRUPTIBILITY_MOVSS_BLOCKING)) {
-        wvmcs(cpu->hvf_fd, VMCS_GUEST_INTERRUPTIBILITY,
+        wvmcs(cpu->hvf_fd, VMCS_GUEST_IGNORE_IRQ,
                val & ~(VMCS_INTERRUPTIBILITY_STI_BLOCKING |
                VMCS_INTERRUPTIBILITY_MOVSS_BLOCKING));
    }
@@ -189,9 +189,9 @@ static inline void vmx_clear_nmi_blocking(CPUState *cpu)
     CPUX86State *env = &x86_cpu->env;
 
     env->hflags2 &= ~HF2_NMI_MASK;
-    uint32_t gi = (uint32_t) rvmcs(cpu->hvf_fd, VMCS_GUEST_INTERRUPTIBILITY);
+    uint32_t gi = (uint32_t) rvmcs(cpu->hvf_fd, VMCS_GUEST_IGNORE_IRQ);
     gi &= ~VMCS_INTERRUPTIBILITY_NMI_BLOCKING;
-    wvmcs(cpu->hvf_fd, VMCS_GUEST_INTERRUPTIBILITY, gi);
+    wvmcs(cpu->hvf_fd, VMCS_GUEST_IGNORE_IRQ, gi);
 }
 
 static inline void vmx_set_nmi_blocking(CPUState *cpu)
@@ -200,27 +200,24 @@ static inline void vmx_set_nmi_blocking(CPUState *cpu)
     CPUX86State *env = &x86_cpu->env;
 
     env->hflags2 |= HF2_NMI_MASK;
-    uint32_t gi = (uint32_t)rvmcs(cpu->hvf_fd, VMCS_GUEST_INTERRUPTIBILITY);
+    uint32_t gi = (uint32_t)rvmcs(cpu->hvf_fd, VMCS_GUEST_IGNORE_IRQ);
     gi |= VMCS_INTERRUPTIBILITY_NMI_BLOCKING;
-    wvmcs(cpu->hvf_fd, VMCS_GUEST_INTERRUPTIBILITY, gi);
+    wvmcs(cpu->hvf_fd, VMCS_GUEST_IGNORE_IRQ, gi);
 }
 
 static inline void vmx_set_nmi_window_exiting(CPUState *cpu)
 {
     uint64_t val;
-    val = rvmcs(cpu->hvf_fd, VMCS_PRI_PROC_BASED_CTLS);
-    wvmcs(cpu->hvf_fd, VMCS_PRI_PROC_BASED_CTLS, val |
-          VMCS_PRI_PROC_BASED_CTLS_NMI_WINDOW_EXITING);
+    val = rvmcs(cpu->hvf_fd, VMCS_CTRL_CPU_BASED);
+    wvmcs(cpu->hvf_fd, VMCS_CTRL_CPU_BASED, val | CPU_BASED_VIRTUAL_NMI_WND);
 
 }
 
 static inline void vmx_clear_nmi_window_exiting(CPUState *cpu)
 {
-
     uint64_t val;
-    val = rvmcs(cpu->hvf_fd, VMCS_PRI_PROC_BASED_CTLS);
-    wvmcs(cpu->hvf_fd, VMCS_PRI_PROC_BASED_CTLS, val &
-          ~VMCS_PRI_PROC_BASED_CTLS_NMI_WINDOW_EXITING);
+    val = rvmcs(cpu->hvf_fd, VMCS_CTRL_CPU_BASED);
+    wvmcs(cpu->hvf_fd, VMCS_CTRL_CPU_BASED, val & ~CPU_BASED_VIRTUAL_NMI_WND);
 }
 
 #endif
