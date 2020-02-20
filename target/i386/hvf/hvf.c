@@ -600,7 +600,8 @@ int hvf_init_vcpu(CPUState *cpu)
           VMCS_PRI_PROC_BASED_CTLS_SEC_CONTROL);
     wvmcs(cpu->hvf_fd, VMCS_SEC_PROC_BASED_CTLS,
           cap2ctrl(hvf_state->hvf_caps->vmx_cap_procbased2,
-                   VMCS_PRI_PROC_BASED2_CTLS_APIC_ACCESSES));
+                   VMCS_PRI_PROC_BASED2_CTLS_APIC_ACCESSES |
+                   CPU_BASED2_RDTSCP));
 
     wvmcs(cpu->hvf_fd, VMCS_ENTRY_CTLS, cap2ctrl(hvf_state->hvf_caps->vmx_cap_entry,
           0));
