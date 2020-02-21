@@ -114,6 +114,8 @@ uint32_t hvf_get_supported_cpuid(uint32_t func, uint32_t idx,
             }
         }
         break;
+    case 0x80000000:
+        break;
     case 0x80000001:
         /* LM only if HVF in 64-bit mode */
         edx &= CPUID_FP87 | CPUID_VME | CPUID_DE | CPUID_PSE | CPUID_TSC |
