@@ -54,12 +54,10 @@
  * Applies to VM-exits due to hardware exception or EPT fault.
  */
 #define EXIT_QUAL_NMIUDTI (1 << 12)
+
 /*
  * VMCS interrupt information fields
  */
-/*
-#define VMCS_INTR_VALID (1U << 31)
-*/
 #define VMCS_INTR_T_MASK 0x700 /* Interruption-info type */
 
 /*
