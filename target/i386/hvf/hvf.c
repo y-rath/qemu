@@ -542,7 +542,6 @@ static void dummy_signal(int sig)
 
 int hvf_init_vcpu(CPUState *cpu)
 {
-
     X86CPU *x86cpu = X86_CPU(cpu);
     CPUX86State *env = &x86cpu->env;
     int r;
@@ -601,15 +600,18 @@ int hvf_init_vcpu(CPUState *cpu)
     wvmcs(cpu->hvf_fd, VMCS_CTRL_CPU_BASED2,
           cap2ctrl(hvf_state->hvf_caps->vmx_cap_procbased2,
                    CPU_BASED2_VIRTUAL_APIC |
-                   CPU_BASED2_RDTSCP ));
+                   CPU_BASED2_EPT |
+                   CPU_BASED2_RDTSCP |
+                   CPU_BASED2_UNRESTRICTED |
+                   CPU_BASED2_VIRT_INTR_DELIVERY |
+                   CPU_BASED2_XSAVES_XRSTORS));
 
     wvmcs(cpu->hvf_fd, VMCS_CTRL_VMENTRY_CONTROLS, cap2ctrl(hvf_state->hvf_caps->vmx_cap_entry, 0));
     wvmcs(cpu->hvf_fd, VMCS_CTRL_EXC_BITMAP, 0); /* Double fault */
 
     wvmcs(cpu->hvf_fd, VMCS_CTRL_TPR_THRESHOLD, 0);
 
-    x86cpu = X86_CPU(cpu);
-    x86cpu->env.xsave_buf = qemu_memalign(4096, 4096);
+    env->xsave_buf = qemu_memalign(4096, 4096);
 
     hv_vcpu_enable_native_msr(cpu->hvf_fd, MSR_STAR, 1);
     hv_vcpu_enable_native_msr(cpu->hvf_fd, MSR_LSTAR, 1);
